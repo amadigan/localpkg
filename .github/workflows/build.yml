@@ -22,6 +22,29 @@ jobs:
       run: |
         brew update
         brew install autoconf
+    - name: Decode and import Code Signing Certificate
+      env:
+        CODESIGN_P12: ${{ secrets.CODESIGN_P12 }}
+        INSTALLER_P12: ${{ secrets.INSTALLER_P12 }}
+        P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+      run: |
+        echo "${CODESIGN_P12}" | base64 --decode > code_signing_cert.p12
+        security import code_signing_cert.p12 -k ~/Library/Keychains/login.keychain-db -P "${P12_PASSWORD}" -T /usr/bin/codesign
+        rm code_signing_cert.p12
+        echo "${INSTALLER_P12}" | base64 --decode > installer_signing_cert.p12
+        security import installer_signing_cert.p12 -k ~/Library/Keychains/login.keychain-db -P "${P12_PASSWORD}" -T /usr/bin/productsign
+        rm installer_signing_cert.p12
+        security unlock-keychain -p ""
+        CODE_SIGNING_IDENTITY=$(security find-identity -v -p codesigning | awk '{print $2}')
+        PKG_SIGNING_IDENTITY=$(security find-identity -v | grep Installer | awk '{print $2}')
+        echo "CODE_SIGNING_IDENTITY=$CODE_SIGNING_IDENTITY" >> $GITHUB_ENV
+        echo "PKG_SIGNING_IDENTITY=$PKG_SIGNING_IDENTITY" >> $GITHUB_ENV
+    - name: Build and sign package
+      env:
+        CODE_SIGNING_IDENTITY: ${{ env.CODE_SIGNING_IDENTITY }}
+        PKG_SIGNING_IDENTITY: ${{ env.PKG_SIGNING_IDENTITY }}
+      run: |
+        ./build-git.sh
     - name: Build Git
       run: ./build-git.sh
     - name: Build installers
@@ -30,7 +53,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        RELEASE_ID=$(gh api repos/${{ github.repository }}/releases | jq -r '.[] | select(.draft == true) | .id')
+        RELEASE_ID=$(gh api repos/${{ github.repository }}/releases | jq -r '.[] | select(.draft == true) | .tag_name')
 
         if [ -z "$RELEASE_ID" ]; then
           echo "No draft release found. Exiting."
