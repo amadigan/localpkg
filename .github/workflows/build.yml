@@ -2,9 +2,8 @@ name: Build Git for macOS
 
 on:
   workflow_dispatch:
-  release:
-    types: [draft]
-
+permissions:
+  contents: write
 jobs:
   build-git:
     runs-on: macos-latest
