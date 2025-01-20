@@ -37,6 +37,8 @@ jobs:
           exit 1
         fi
 
+        echo "Uploading build artifacts to release $RELEASE_ID"
+
         gh release upload "$RELEASE_ID" dist/git.pkg --clobber
         gh release upload "$RELEASE_ID" dist/git.tar.gz --clobber
         gh release upload "$RELEASE_ID" dist/git --clobber
