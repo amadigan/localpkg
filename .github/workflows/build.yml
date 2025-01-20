@@ -6,7 +6,7 @@ permissions:
   contents: write
 jobs:
   build-git:
-    runs-on: macos-latest
+    runs-on: macos-15
     environment: prod
 
     steps:
@@ -81,10 +81,7 @@ jobs:
 
         echo "Uploading build artifacts to release $RELEASE_ID"
 
-        gh release upload "$RELEASE_ID" dist/git.pkg --clobber
-        gh release upload "$RELEASE_ID" dist/git.tar.gz --clobber
-        gh release upload "$RELEASE_ID" dist/git --clobber
-        gh release upload "$RELEASE_ID" dist/gh --clobber
+        gh release upload "$RELEASE_ID" dist/* --clobber
     - name: Save Git Source Cache
       uses: actions/cache@v3
       if: always() # Ensure cache is saved even if the build fails
