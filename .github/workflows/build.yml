@@ -7,6 +7,7 @@ permissions:
 jobs:
   build-git:
     runs-on: macos-latest
+    environment: prod
 
     steps:
     - name: Checkout Repository
