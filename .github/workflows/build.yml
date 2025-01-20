@@ -1,0 +1,21 @@
+name: Build Git for macOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-git:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+    - name: Cache Git Source
+      uses: actions/cache@v3
+      with:
+        path: src/git/.git
+        key: git-src
+        restore-keys: |
+          git-src
+    - name: Build Git
+      run: ./build-git.sh
