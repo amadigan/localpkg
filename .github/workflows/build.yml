@@ -17,5 +17,9 @@ jobs:
         key: git-src
         restore-keys: |
           git-src
+    - name: Install Dependencies
+      run: |
+        brew update
+        brew install autoconf
     - name: Build Git
       run: ./build-git.sh
