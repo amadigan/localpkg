@@ -59,6 +59,9 @@ jobs:
       env:
         CODE_SIGNING_IDENTITY: ${{ env.CODE_SIGNING_IDENTITY }}
         PKG_SIGNING_IDENTITY: ${{ env.PKG_SIGNING_IDENTITY }}
+        APPLE_ID: ${{ secrets.APPLE_ID }}
+        APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       run: |
         ./build-git.sh
     - name: Build Git
