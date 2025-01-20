@@ -42,7 +42,7 @@ jobs:
         security import code_signing_cert.p12 -k "${KEYCHAIN_NAME}" -P "${P12_PASSWORD}" -T /usr/bin/codesign
         rm code_signing_cert.p12
         echo "${INSTALLER_P12}" | base64 --decode > installer_signing_cert.p12
-        security import installer_signing_cert.p12 -k "${KEYCHAIN_NAME}" -P "${P12_PASSWORD}" -T /usr/bin/productsign
+        security import installer_signing_cert.p12 -k "${KEYCHAIN_NAME}" -P "${P12_PASSWORD}" -T /usr/bin/productbuild
         rm installer_signing_cert.p12
 
         # Set key partition list
