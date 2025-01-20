@@ -29,18 +29,28 @@ jobs:
         INSTALLER_P12: ${{ secrets.INSTALLER_P12 }}
         P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
       run: |
+        # Create a new keychain
+        KEYCHAIN_NAME=build.keychain
+        KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+        security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_NAME}"
+        security set-keychain-settings -lut 21600 "${KEYCHAIN_NAME}"
+        security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_NAME}"
+        security list-keychains -s "${KEYCHAIN_NAME}" $(security list-keychains -d user | tr -d '"')
+
+        # Import certificates into the new keychain
         echo "${CODESIGN_P12}" | base64 --decode > code_signing_cert.p12
-        security import code_signing_cert.p12 -k ~/Library/Keychains/login.keychain-db -P "${P12_PASSWORD}" -T /usr/bin/codesign
+        security import code_signing_cert.p12 -k "${KEYCHAIN_NAME}" -P "${P12_PASSWORD}" -T /usr/bin/codesign
         rm code_signing_cert.p12
         echo "${INSTALLER_P12}" | base64 --decode > installer_signing_cert.p12
-        security import installer_signing_cert.p12 -k ~/Library/Keychains/login.keychain-db -P "${P12_PASSWORD}" -T /usr/bin/productsign
+        security import installer_signing_cert.p12 -k "${KEYCHAIN_NAME}" -P "${P12_PASSWORD}" -T /usr/bin/productsign
         rm installer_signing_cert.p12
-        TEMP_KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
-        security unlock-keychain -p "" ~/Library/Keychains/login.keychain-db
-        security set-key-partition-list -S apple-tool:,apple: -s -k "" ~/Library/Keychains/login.keychain-db
-        security find-identity -v 
-        CODE_SIGNING_IDENTITY=$(security find-identity -v -p codesigning | awk 'NR == 1{print $2}')
-        PKG_SIGNING_IDENTITY=$(security find-identity -v | grep Installer | awk 'NR == 1{print $2}')
+
+        # Set key partition list
+        security set-key-partition-list -S apple-tool:,apple: -s -k "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_NAME}"
+
+        # Find identities
+        CODE_SIGNING_IDENTITY=$(security find-identity -v -p codesigning "${KEYCHAIN_NAME}" | awk 'NR == 1{print $2}')
+        PKG_SIGNING_IDENTITY=$(security find-identity -v "${KEYCHAIN_NAME}" | grep Installer | awk 'NR == 1{print $2}')
         echo "CODE_SIGNING_IDENTITY=$CODE_SIGNING_IDENTITY"
         echo "PKG_SIGNING_IDENTITY=$PKG_SIGNING_IDENTITY"
         echo "CODE_SIGNING_IDENTITY=$CODE_SIGNING_IDENTITY" >> $GITHUB_ENV
