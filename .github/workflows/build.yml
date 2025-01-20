@@ -36,8 +36,11 @@ jobs:
         security import installer_signing_cert.p12 -k ~/Library/Keychains/login.keychain-db -P "${P12_PASSWORD}" -T /usr/bin/productsign
         rm installer_signing_cert.p12
         security unlock-keychain -p ""
-        CODE_SIGNING_IDENTITY=$(security find-identity -v -p codesigning | awk '{print $2}')
-        PKG_SIGNING_IDENTITY=$(security find-identity -v | grep Installer | awk '{print $2}')
+        security find-identity -v 
+        CODE_SIGNING_IDENTITY=$(security find-identity -v -p codesigning | awk 'NR == 1{print $2}')
+        PKG_SIGNING_IDENTITY=$(security find-identity -v | grep Installer | awk 'NR == 1{print $2}')
+        echo "CODE_SIGNING_IDENTITY=$CODE_SIGNING_IDENTITY"
+        echo "PKG_SIGNING_IDENTITY=$PKG_SIGNING_IDENTITY"
         echo "CODE_SIGNING_IDENTITY=$CODE_SIGNING_IDENTITY" >> $GITHUB_ENV
         echo "PKG_SIGNING_IDENTITY=$PKG_SIGNING_IDENTITY" >> $GITHUB_ENV
     - name: Build and sign package
