@@ -35,7 +35,9 @@ jobs:
         echo "${INSTALLER_P12}" | base64 --decode > installer_signing_cert.p12
         security import installer_signing_cert.p12 -k ~/Library/Keychains/login.keychain-db -P "${P12_PASSWORD}" -T /usr/bin/productsign
         rm installer_signing_cert.p12
-        security unlock-keychain -p ""
+        TEMP_KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+        security unlock-keychain -p "${TEMP_KEYCHAIN_PASSWORD}" ~/Library/Keychains/login.keychain-db
+        security set-key-partition-list -S apple-tool:,apple: -s -k "${TEMP_KEYCHAIN_PASSWORD}" ~/Library/Keychains/login.keychain-db
         security find-identity -v 
         CODE_SIGNING_IDENTITY=$(security find-identity -v -p codesigning | awk 'NR == 1{print $2}')
         PKG_SIGNING_IDENTITY=$(security find-identity -v | grep Installer | awk 'NR == 1{print $2}')
