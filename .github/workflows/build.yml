@@ -47,6 +47,8 @@ jobs:
 
         # Set key partition list
         security set-key-partition-list -S apple-tool:,apple: -s -k "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_NAME}"
+        security list-keychains -s "${KEYCHAIN_NAME}" $(security list-keychains -d user | tr -d '"')
+        security default-keychain -s "${KEYCHAIN_NAME}"
 
         # Find identities
         CODE_SIGNING_IDENTITY=$(security find-identity -v -p codesigning "${KEYCHAIN_NAME}" | awk 'NR == 1{print $2}')
