@@ -66,8 +66,6 @@ jobs:
         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       run: |
         ./build-git.sh
-    - name: Build Git
-      run: ./build-git.sh
     - name: Build installers
       run: ./build-pkgs.sh
     - name: Attach Build Files to Release
