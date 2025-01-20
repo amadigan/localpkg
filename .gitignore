@@ -2,3 +2,4 @@
 /dist/
 /build/
 /build-props-local.sh
+.DS_Store
