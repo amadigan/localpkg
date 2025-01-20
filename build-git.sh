@@ -1,8 +1,14 @@
 #! /bin/bash
+set -e
+set -x
 project_root="$(realpath "${BASH_SOURCE%/*}")"
 cpus=$(sysctl -n hw.ncpu)
 
 source "${project_root}/build-props.sh"
+
+if [[ -f "${project_root}/build-props-local.sh" ]]; then
+	source "${project_root}/build-props-local.sh"
+fi
 
 if [[ ! -d "${project_root}/src/git/.git" ]]; then
 	mkdir -p "${project_root}/src"
@@ -26,7 +32,6 @@ version="$(git -C "${project_root}/src/git" describe)"
 build_git() {
 	local arch="${1}"
 
-	set -x
 	export CFLAGS="-arch ${arch} -mmacosx-version-min=13"
 	export LDFLAGS="-arch ${arch} -mmacosx-version-min=13"
 
@@ -44,7 +49,6 @@ build_git() {
 	make
 	strip -x git-credential-osxkeychain
 	cp git-credential-osxkeychain "${project_root}/build/${arch}/libexec/git-core/"
-	set +x
 }
 
 rm -rf "${project_root}/build"
@@ -88,6 +92,11 @@ sort -n -k1,1 -k2,2 -k3,3 | while read inode length path; do
 		x86_file="build/x86_64/${base_path}"
 		if [[ "$(file -b --mime-type "$path")" == "application/x-mach-binary" ]]; then
 			lipo -create -output "build/pkg/${base_path}" "${path}" "${x86_file}"
+
+			if [[ -n "${CODE_SIGNING_IDENTITY}" ]]; then
+				codesign --options runtime --force --sign "${CODE_SIGNING_IDENTITY}" "build/pkg/${base_path}"
+			fi
+
 			cp -la "build/pkg/${base_path}" "${tar_root}/${base_path}"
 		else
 			cp -la "${path}" "build/pkg/${base_path}"
@@ -99,7 +108,6 @@ sort -n -k1,1 -k2,2 -k3,3 | while read inode length path; do
 	fi
 done 
 
-set -x
 mkdir -p "${project_root}/build/pkg/etc"
 cp "${project_root}/gitconfig" "${project_root}/build/pkg/etc/gitconfig"
 
@@ -117,11 +125,27 @@ cp "${project_root}/src/git/LGPL-2.1" build/resources/License
 
 mkdir -p "${project_root}/dist"
 
+sign_args=()
+
+if [[ -n "${PKG_SIGNING_IDENTITY}" ]]; then
+	sign_args+=("--sign" "${PKG_SIGNING_IDENTITY}")
+fi
+
 productbuild --distribution build/distribution.xml --package-path build --resources build/resources \
-	dist/git.pkg
+	"${sign_args[@]}" dist/git.pkg
+
+if [[ -n "${APPLE_TEAM_ID}" && -n "${APPLE_ID}" && -n "${APPLE_ID_PASSWORD}" ]]; then
+	echo "Submitting to Apple notarization service"
+	xcrun notarytool submit dist/git.pkg \
+  --apple-id "${APPLE_ID}" \
+  --team-id "${APPLE_TEAM_ID}" \
+  --password "${APPLE_ID_PASSWORD}" \
+  --wait
+
+	xcrun stapler staple dist/git.pkg
+fi
 
 
 cp "${project_root}/src/git/LGPL-2.1" build/tar/git-${version}/LICENSE
 
 bsdtar --options xz:compression-level=9 -C build/tar -cJf dist/git.tar.xz git-${version}
-set +x
