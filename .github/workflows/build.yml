@@ -2,6 +2,8 @@ name: Build Git for macOS
 
 on:
   workflow_dispatch:
+  release:
+    types: [draft]
 
 jobs:
   build-git:
@@ -23,3 +25,26 @@ jobs:
         brew install autoconf
     - name: Build Git
       run: ./build-git.sh
+    - name: Build installers
+      run: ./build-pkgs.sh
+    - name: Attach Build Files to Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        RELEASE_ID=$(gh api repos/${{ github.repository }}/releases | jq -r '.[] | select(.draft == true) | .id')
+
+        if [ -z "$RELEASE_ID" ]; then
+          echo "No draft release found. Exiting."
+          exit 1
+        fi
+
+        gh release upload "$RELEASE_ID" dist/git.pkg --label "Git for macOS"
+        gh release upload "$RELEASE_ID" dist/git.tar.gz
+        gh release upload "$RELEASE_ID" dist/git --label "git localpkg installer"
+        gh release upload "$RELEASE_ID" dist/gh --label "GitHub CLI localpkg installer"
+    - name: Save Git Source Cache
+      uses: actions/cache@v3
+      if: always() # Ensure cache is saved even if the build fails
+      with:
+        path: src/git/.git
+        key: git-src

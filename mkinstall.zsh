@@ -9,8 +9,6 @@ mkinstall() {
 	cat "${lp_srcpath}/libinstall.zsh" | awk 'NR == 1 && /^#!/ { next } { print }'
 }
 
-mkinstall "${1}"
-
 # expect -o file or -r
 outfile=""
 run=0
@@ -30,10 +28,12 @@ while getopts "o:r" opt; do
 	esac
 done
 
-if [ -n "${outfile}" ]; then
+shift $((OPTIND -1))
+
+if [[ -n "${outfile}" ]]; then
 	mkinstall "${1}" > "${outfile}"
 fi
 
-if [ "${run}" -eq 1 ]; then
+if [[ "${run}" -eq 1 ]]; then
 	mkinstall "${1}" | zsh
 fi

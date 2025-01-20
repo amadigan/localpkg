@@ -1,5 +1,4 @@
 #! /bin/bash
-set -e
 project_root="$(realpath "${BASH_SOURCE%/*}")"
 cpus=$(sysctl -n hw.ncpu)
 
@@ -116,11 +115,13 @@ mkdir -p build/resources
 
 cp "${project_root}/src/git/LGPL-2.1" build/resources/License
 
+mkdir -p "${project_root}/dist"
+
 productbuild --distribution build/distribution.xml --package-path build --resources build/resources \
-	build/git.pkg
+	dist/git.pkg
 
 
 cp "${project_root}/src/git/LGPL-2.1" build/tar/git-${version}/LICENSE
 
-bsdtar --options xz:compression-level=9 -C build/tar -cJf build/git.tar.xz git-${version}
+bsdtar --options xz:compression-level=9 -C build/tar -cJf dist/git.tar.xz git-${version}
 set +x
