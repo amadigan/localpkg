@@ -3,3 +3,4 @@
 /build/
 /build-props-local.sh
 .DS_Store
+testprefix*

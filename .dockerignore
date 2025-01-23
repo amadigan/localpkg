@@ -1,0 +1,8 @@
+src/
+testprefix/
+build/
+dist/
+.git/
+.github/
+.gitignore
+.dockerignore

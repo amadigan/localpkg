@@ -1,0 +1,15 @@
+name: Test Build
+
+on:
+  workflow_dispatch:
+jobs:
+  build-git:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+    - name: Build installers
+      run: |
+      zsh --version
+      mkdir -p ./dist
+      ./localpkg.zsh build @ dist/localpkg
