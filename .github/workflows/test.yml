@@ -10,6 +10,6 @@ jobs:
       uses: actions/checkout@v3
     - name: Build installers
       run: |
-      zsh --version
-      mkdir -p ./dist
-      ./localpkg.zsh build @ dist/localpkg
+        zsh --version
+        mkdir -p ./dist
+        ./localpkg.zsh build @ dist/localpkg
