@@ -8,8 +8,12 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v3
+    - name: Setup Zsh
+      run: |
+        sudo apt-get update
+        sudo apt-get install zsh
+        zsh --version
     - name: Build installers
       run: |
-        zsh --version
         mkdir -p ./dist
         ./localpkg.zsh build @ dist/localpkg
