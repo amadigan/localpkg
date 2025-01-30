@@ -17,6 +17,8 @@ jobs:
     - name: Log in to registry
       run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
     - name: Build Release Assets
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: |
         docker buildx create --name container-builder --driver docker-container --use
         export RELEASE_TAG="$(git describe --tags --always)"
