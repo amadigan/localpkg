@@ -1,6 +1,9 @@
 /src/
-/dist/
+/release/
 /build/
 /build-props-local.sh
 .DS_Store
-testprefix*
+/testprefix*
+/cache/
+/dist/
+/.vscode

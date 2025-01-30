@@ -1,0 +1,32 @@
+name: Validate Release Build
+
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+    - name: Pull Cache
+      uses: actions/cache@v4
+      with:
+        path: cache
+        key: docker-cache
+        restore-keys: |
+          docker-cache
+    - name: Build Release Assets
+      run: |
+        docker buildx create --name container-builder --driver docker-container --use
+        mkdir -p cache
+        export DOCKER_CACHE="$(pwd)/cache"
+        export RELEASE_TAG="$(git describe --tags --always)"
+        ./build-docker-release.sh  release
+        ./build-docker.sh
+    - name: Push Cache
+      uses: actions/cache@v4
+      if: always()
+      with:
+        path: cache
+        key: docker-cache
+

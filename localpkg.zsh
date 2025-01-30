@@ -1,49 +1,64 @@
 #!/bin/zsh
 
-source "${0:A:h}/libinstall.zsh"
+# load lib/*.zsh
 
-# this ultimately just sources the files in app/. This code allows localpkg to build and install itself
+zmodload zsh/param/private
 
-typeset -U xlpcli_vars xlpcli_funcs xlpcli_old_funcs
-typeset -A xlpcli_old_vars
+typeset -gU xlp_old_funcs xlp_old_vars
+
+xlp_old_funcs=(${(k)functions})
+xlp_old_vars=(${(k)parameters})
+
+for xlp_libfile in "${0:A:h}/lib"/*.zsh; do
+	[[ "${xlp_libfile}" != *_test.zsh ]] && source "${xlp_libfile}"
+done
+
+unset xlp_libfile
 
 function {
-	local xlp_func xlp_var
+	private xlp_var
+	
+	xlp_vars=()
 
-	for xlp_func in ${(k)functions}; do
-		[[ "${xlp_func}" == "lpcli_"* ]] && xlpcli_old_funcs+=("${xlp_func}")
+	for xlp_var in ${(k)parameters:|xlp_old_vars}; do
+		[[ "${parameters[${xlp_var}]}" == *-tag* ]] && xlp_vars+=("${xlp_var}")
 	done
 
-	for xlp_var in ${(k)parameters}; do
-		[[ "${xlp_var}" == "lpcli_"* ]] && xlpcli_old_vars[${xlp_var}]="${parameters[${xlp_var}]}"
-	done
+	# remove empty strings
+	xlp_vars=(${(M)xlp_vars:#?*})
+	xlp_vars=(${(o)xlp_vars})
+
+	xlp_funcs=(${(k)functions:|xlp_old_funcs})
+	xlp_funcs=(${(o)xlp_funcs})
+
+	xlp_old_funcs=(${(k)functions})
+	xlp_old_vars=(${(k)parameters})
 }
 
+# load app/*.zsh
+
 for xlp_appfile in "${0:A:h}/app"/*.zsh; do
-	source "${xlp_appfile}"
+	[[ "${xlp_appfile}" != *_test.zsh ]] && source "${xlp_appfile}"
 done
 
 unset xlp_appfile
 
 function {
-	local xlp_func xlp_var
+	private xlp_var
 	
-	for xlp_func in ${(k)functions}; do
-		[[ "${xlp_func}" == "lpcli_"* ]] && xlpcli_funcs+=("${xlp_func}")
+	xlpcli_vars=()
+
+	for xlp_var in ${(k)parameters:|xlp_old_vars}; do
+		[[ "${parameters[${xlp_var}]}" == *-tag* ]] && xlpcli_vars+=("${xlp_var}")
 	done
 
-	xlpcli_funcs=(${(k)xlpcli_funcs:|xlpcli_old_funcs})
-
-	for xlp_var in ${(k)parameters}; do
-		if [[ "${xlp_var}" == "lpcli_"* && 
-				("${xlpcli_old_vars[${xlp_var}]}" != "${parameters[${xlp_var}]}" || -z "${xlpcli_old_vars[${xlp_var}]}" ) 
-		]]; then
-			xlpcli_vars+=("${xlp_var}")
-		fi
-	done
-
-	xlpcli_vars+=( "xlpcli_vars" "xlpcli_funcs" )
 	xlpcli_vars=(${(M)xlpcli_vars:#?*})
+	xlpcli_vars=(${(o)xlpcli_vars})
+
+	xlpcli_funcs=(${(k)functions:|xlp_old_funcs})
+	xlpcli_funcs=(${(o)xlpcli_funcs})
+
+	unset xlpcli_old_funcs xlpcli_old_vars
 }
 
 lpcli_main "${@}"

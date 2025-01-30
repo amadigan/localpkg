@@ -1,105 +1,174 @@
+typeset -tagU xlpcli_vars xlpcli_funcs
+
 lpcli_load_script() {
 	# load a script, recording the resulting variables and functions for transclusion
 	# results are added to lp_script_vars and lp_script_funcs
-	lp_script_vars=()
-	lp_script_funcs=()
+	lpcli_script_vars=()
+	lpcli_script_funcs=()
+	lpcli_script_mods=()
 
-	if [[ -z "$1" || ! -f "$1" ]]; then
-		lp_fatal "Error: Script to be sourced (${1}) is not provided or does not exist."
-	fi
+	private -U old_mods=($(zmodload -LF))
+	private -U old_funcs=(${(k)functions})
+	private -U old_vars=(${(k)parameters})
 
-	local -U lp_exclude_vars=("LOCALPKG_PREFIX" "zle_bracketed_paste" "WATCHFMT" "LOGCHECK")
-
-	local -U lp_pre_funcs=(${(k)functions})
-	local -A lp_pre_vars
-	local lp_var
+	eval "${1}"
 
 	for lp_var in ${(k)parameters}; do
-	  if [[ " ${lp_exclude_vars[@]} " != *" ${lp_var} "* ]]; then
-	    lp_pre_vars[${lp_var}]="${parameters[${lp_var}]}"
-	  fi
+		[[ "${parameters[${lp_var}]}" == *-tag* ]] && lpcli_script_vars+=("${lp_var}")
 	done
 
-	source "$1"
+	lpcli_script_vars=(${lpcli_script_vars:|old_vars})
+	lpcli_script_vars=(${lpcli_script_vars:#?*})
+	lpcli_script_vars=(${(o)lpcli_script_vars})
 
-	for lp_var in ${(k)parameters}; do
-		if [[ " ${lp_exclude_vars[@]} " != *" ${lp_var} "* &&
-			 (${lp_pre_vars[${lp_var}]} != "${parameters[${lp_var}]}" || -z "${lp_pre_vars[${lp_var}]}" ) ]]; then
-			lp_script_vars+=("${lp_var}")
-		fi
-	done
+	lpcli_script_funcs=(${(k)functions})
+	lpcli_script_funcs=(${lpcli_script_funcs:|old_funcs})
+	lpcli_script_funcs=(${lpcli_script_funcs:#?*})
+	lpcli_script_funcs=(${(o)lpcli_script_funcs})
 
-	local -U lp_post_funcs=(${(k)functions})
-	lp_script_funcs=(${lp_post_funcs:|lp_pre_funcs})
-	lp_script_vars=(${lp_script_vars:#?*})
+	lpcli_script_mods=($(zmodload -LF))
+	lpcli_script_mods=(${lpcli_script_mods:|old_mods})
+	lpcli_script_mods=(${lpcli_script_mods:#?*})
+	lpcli_script_mods=(${(o)lpcli_script_mods})
 }
 
-lpcli_build() {
+lpcli_cmd_build() {
 	# build subcommand
+	private -A opts=()
 
-	if [[ -z "${1}" ]]; then
-		echo "Usage: ${ZSH_ARGZERO} build infile [outfile]"
-		exit 1
+	zparseopts -D -E -A opts h -help z -compress
+
+	if [[ -v opts[-h] || -v opts[--help] ]]; then
+		lpcli_build_help
+		return 0
 	fi
 
-	local infile="${1}"
-	shift
+	private src="${1}"
+	private dest="${2}"
+	private gen=""
 
-	if [[ -n "${1}" ]]; then
-		local outfile="${1}"
-		zf_rm -f "${outfile}"
-		shift
-	fi
+	[[ "${src}" == "-" ]] && src=""
+	[[ "${dest}" == "-" ]] && dest=""
 
-	if [[ "${infile}" == "@" ]]; then
-		if [[ -n "${outfile}" ]]; then
-			lpcli_build_self > "${outfile}"
-			zf_chmod 755 "${outfile}"
-		else
-			lpcli_build_self
+	private fd=0
+	private line
+
+	if [[ "${src}" != "@" ]]; then
+		if [[ -n "${src}" ]] && ! sysopen -r fd "${src}"; then
+			lp_error "Failed to open ${src}"
+			return 1
 		fi
-	elif [[ -n "${outfile}" ]]; then
-		lpcli_build_installer "${infile}" "${@}" > "${outfile}"
-		zf_chmod 755 "${outfile}"
-	else
-		lpcli_build_installer "${infile}" "${@}"
+
+		src=""
+		while sysread -i ${fd} -t 0 line; do src+="${line}"; done
+		exec {fd}<&-
 	fi
+
+	if ! gen="$(lpcli_build_installer "${src}")"; then
+		lp_error "Failed to build installer"
+		return 1
+	fi
+
+	[[ -n "${dest}" ]] && builtin rm -f "${dest}"
+
+	private outfmt="%s\n"
+
+	if [[ -v opts[-z] || -v opts[--compress] ]]; then
+		outfmt="%s"
+		private outfile="${dest}"
+
+		if [[ -z "${dest}" ]]; then
+			local lp_mktemp_file
+			lp_mktempfile
+			outfile="${lp_mktemp_file}"
+			unset lp_mktemp_file
+		fi
+
+		printf "%s" "${gen}" > "${outfile}"
+		private pkgname="$(lpcli_build_get_pkg_name "${src}")"
+		if ! gen="$(lp_compress_script "${pkgname}" "${outfile}")"; then
+			lp_error "Failed to compress installer"
+			return 1
+		fi
+		builtin rm -f "${outfile}"
+	fi
+
+	if [[ -n "${dest}" ]]; then
+		printf "${outfmt}" "${gen}" > "${dest}"
+		builtin chmod 755 "${dest}"
+	else
+		printf "${outfmt}" "${gen}"
+	fi
+
+	return 0
+}
+
+lpcli_build_help() {
+	echo "Build an installer script"
+	echo "Usage: ${ZSH_ARGZERO} build [options...] [infile] [outfile]"
+	echo ""
+	echo "Options:"
+	echo "  -h, --help  Show this help message"
+	echo "  -z, --compress Generate a compressed installer"
+	echo ""
+	echo "To build from stdin, use '-' as the infile"
 }
 
 lpcli_build_installer() {
-	local srcpath="${1}"
-	shift
+	private srcpath="${1}"
 
-	local -U lp_script_vars lp_script_funcs
+	local -a lpcli_script_vars lpsc_script_funcs lpsc_script_mods
 
-	lpcli_load_script "${srcpath}"
+	[[ "${1}" != "@" ]] && lpcli_load_script "${srcpath}"
 
-	local override
-
-	for override in "${@}"; do
-		[[ -n "${override}" ]] && eval "${override}"
-	done
-
-	echo "#!/bin/zsh"
-	echo "LOCALPKG_PREFIX=\"\${LOCALPKG_PREFIX:=\${HOME}/.local}\""
-	
+	printf "#!/bin/zsh\n"
 	xlp_transclude
 
-	[[ ${#lp_script_vars[@]} -gt 0 ]] && typeset -p "${lp_script_vars[@]}"
-	[[ ${#lp_script_funcs[@]} -gt 0 ]] && typeset -f "${lp_script_funcs[@]}"
-	echo "lp_main \"\${@}\""
+	if [[ "${1}" == "@" ]]; then
+		typeset -p "${xlpcli_vars[@]}"
+		typeset -f "${xlpcli_funcs[@]}"
+		printf "lpcli_main \"\${@}\"\nexit\n"
+	else
+		[[ ${#lpcli_script_mods[@]} -gt 0 ]] && print -l "${lpcli_script_mods[@]}"
+		[[ ${#lpcli_script_vars[@]} -gt 0 ]] && typeset -p "${lpcli_script_vars[@]}"
+		[[ ${#lpcli_script_funcs[@]} -gt 0 ]] && typeset -f "${lpcli_script_funcs[@]}"
+		printf "lp_installer_main \"\${@}\"\nexit\n"
+	fi
 }
 
-lpcli_build_self() {
-	echo "#!/bin/zsh"
-	echo "LOCALPKG_PREFIX=\"\${LOCALPKG_PREFIX:=\${HOME}/.local}\""
-	xlp_transclude
-	typeset -p "${xlpcli_vars[@]}"
-	typeset -f "${xlpcli_funcs[@]}"
-	echo "lpcli_main \"\${@}\""
+lpcli_build_get_pkg_name() {
+	if [[ "${1}" == "@" ]]; then
+		printf "localpkg"
+	else
+		local -A lp_pkg=()
+		eval "${1}" || return 1
+		printf "${lp_pkg[name]}"
+	fi
 }
 
-lpcli_test() {
-	[[ -z "${1}" ]] && lp_fatal "Usage: ${ZSH_ARGZERO} test <script> [overrides...]"
-	lpcli_build_installer "${@}" | zsh -s
+lpcli_cmd_test() {
+	private -A opts=()
+	zparseopts -D -E -A opts h -help
+
+	if [[ -v opts[-h] || -v opts[--help] ]]; then
+		lpcli_test_help
+		return 0
+	fi
+
+	if [[ -z "${1}" ]]; then
+		lpcli_test_help
+
+		return 1
+	fi
+
+	(lpcli_build_installer "${1}") | exec -a "${1}" zsh -s
+}
+
+lpcli_test_help() {
+	echo "Test an installer script"
+	echo "Usage: ${ZSH_ARGZERO} test [options...] infile"
+	echo ""
+	echo "Options:"
+	echo "  -h, --help  Show this help message"
+	echo ""
 }

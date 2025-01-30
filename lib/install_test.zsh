@@ -1,8 +1,8 @@
 test_install_executable() {
 	lp_reset_pkg_vars
-	lp_mktemp
+	lp_mktempdir
 	export LOCALPKG_PREFIX="${lpr_tmp_dir}"
-	lp_mktemp
+	lp_mktempdir
 	local mock_server="${lpr_tmp_dir}"
 	local mock_file="${mock_server}/hello.sh"
 
@@ -27,11 +27,11 @@ test_install_executable() {
 
 test_install_exec_atroot() {
 	lp_reset_pkg_vars
-	lp_mktemp
+	lp_mktempdir
 	export LOCALPKG_PREFIX="${lpr_tmp_dir}"
-	lp_mktemp
+	lp_mktempdir
 	local mock_server="${lpr_tmp_dir}"
-	zf_mkdir -p "${mock_server}/hello"
+	builtin mkdir -p "${mock_server}/hello"
 
 	mkhello "${mock_server}/hello/hello.sh"
 
@@ -59,5 +59,5 @@ test_install_exec_atroot() {
 mkhello() {
 	echo '#!/bin/sh' > "${1}"
 	echo 'echo "Hello, world!"' >> "${1}"
-	zf_chmod 755 "${1}"
+	builtin chmod 755 "${1}"
 }

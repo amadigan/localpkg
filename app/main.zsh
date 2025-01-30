@@ -1,29 +1,16 @@
 lpcli_main() {
-	if [[ -z "${1}" ]]; then
-		echo "Usage: ${ZSH_ARGZERO} <subcommand> [args...]"
-		echo "localpkg subcommands:"
-		echo "  build - build a script a localpkg install script"
-		exit 1
-	fi
+	lp_boot
 
-	local subcommand="${1}"
+	typeset -g lpcli_arg0="${ZSH_ARGZERO:-localpkg}"
+	# replace home with ~
+	lpcli_arg0="${lpcli_arg0/$HOME/~}"
 
-	shift
-
-	case "${subcommand}" in
-		build)
-			lpcli_build "${@}"
-			;;
-		test)
-			lpcli_test "${@}"
-			;;
-		*)
-			echo "Error: Unknown subcommand: ${subcommand}"
-			exit 1
-			;;
-	esac
+	lp_cmd lpcli_cmd "${@}"
+	return 
 }
 
-lpcli_usage() {
-	echo "Usage: ${0} <pkg_url> [-n <pkg_name>] [-v <version>]"
+lpcli_cmd_help() {
+	echo "Manage packages installed in ~/.local"
+	echo "Usage: ${lpcli_arg0} <command> [options...]"
+	lp_cmd_help lpcli_cmd
 }
