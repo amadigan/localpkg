@@ -54,7 +54,7 @@ lpcli_cmd_build() {
 	private line
 
 	if [[ "${src}" != "@" ]]; then
-		if [[ -n "${src}" ]] && ! sysopen -r fd "${src}"; then
+		if [[ -n "${src}" ]] && ! sysopen -r -u fd "${src}"; then
 			lp_error "Failed to open ${src}"
 			return 1
 		fi
