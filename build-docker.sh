@@ -31,12 +31,6 @@ if [[ -n "${RELEASE_TAG}" ]]; then
 	docker_args+=("--build-arg" "RELEASE_TAG=${RELEASE_TAG}")
 fi
 
-if [[ -n "${DOCKER_CACHE_DIR}" ]]; then
-	DOCKER_CACHE_DIR="$(realpath "${DOCKER_CACHE_DIR}")" || exit 1
-	# inline cache
-	docker_args+=("--cache-from" "type=local,src=${DOCKER_CACHE_DIR}" "--cache-to" "type=local,dest=${DOCKER_CACHE_DIR}" --build-arg "BUILDKIT_INLINE_CACHE=1")
-fi
-
 realpath "$(dirname "${BASH_SOURCE[0]}")"
 declare srcdir="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 

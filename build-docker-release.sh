@@ -2,7 +2,7 @@
 # This script should work on bash 3+ (for macOS and GitHub Actions)
 set -e
 declare outdir="."
-declare push=""
+declare push=0
 
 while [[ $# -gt 0 ]]; do
 	case "${1}" in
@@ -15,13 +15,8 @@ while [[ $# -gt 0 ]]; do
 			exit 0
 			;;
 		-p|--push)
-			if [[ -z "${2}" ]]; then
-				echo Error: --push requires a tag
-				exit 1
-			else
-				push="${2}"
-			fi
-			shift 2
+			push=1
+			shift
 			;;
 		*)
 			outdir="${1}"
@@ -40,12 +35,6 @@ if [[ -n "${RELEASE_TAG}" ]]; then
 	docker_args+=("--build-arg" "RELEASE_TAG=${RELEASE_TAG}")
 fi
 
-if [[ -n "${DOCKER_CACHE_DIR}" ]]; then
-	DOCKER_CACHE_DIR="$(realpath "${DOCKER_CACHE_DIR}")" || exit 1
-	# inline cache
-	docker_args+=("--cache-from" "type=local,src=${DOCKER_CACHE_DIR}" "--cache-to" "type=local,dest=${DOCKER_CACHE_DIR}" --build-arg "BUILDKIT_INLINE_CACHE=1")
-fi
-
 realpath "$(dirname "${BASH_SOURCE[0]}")"
 declare srcdir="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 
@@ -62,5 +51,5 @@ cd "${outdir}" || exit 1
 docker buildx build "${docker_args[@]}" --target release --output type=local,dest=. "${srcdir}"
 
 if [[ -n "${push}" ]]; then
-	docker buildx build --platform linux/arm64,linux/amd64 "${docker_args[@]}" --target localpkg --tag "${push}" --push "${srcdir}"
+	docker buildx build --platform linux/arm64,linux/amd64 "${docker_args[@]}" --target localpkg --tag "ghcr.io/${GITHUB_REPOSITORY}/localpkg:${RELEASE_TAG}" --push "${srcdir}"
 fi
