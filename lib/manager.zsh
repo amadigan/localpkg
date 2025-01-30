@@ -7,15 +7,7 @@ lp_mgr_create() {
 	private mgr_file="${LOCALPKG_PREFIX}/pkg/${lp_pkg[name]}"
 	builtin mkdir -p "${mgr_file:h}"
 	[[ -f "${mgr_file}" ]] && builtin rm -f "${mgr_file}"
-	lp_mgr_build "${@}" > "${mgr_file}"
-	
-	if (( compress )); then
-		lp_log "Compressing manager script"
-		private mgrz="$(lp_compress_script "${lp_pkg[name]}" "${mgr_file}")"
-		builtin rm -f "${mgr_file}"
-		printf "%s" "${mgrz}" > "${mgr_file}"
-	fi
-
+	(lp_mgr_build "${@}") > "${mgr_file}"
 	builtin chmod 755 "${mgr_file}"
 
 	echo "${mgr_file}"
@@ -188,12 +180,10 @@ lp_uninstaller() {
 		# if the sum starts with L then it's a symlink
 		if (( force )); then
 			builtin rm -f "${fname}"
-			unset lp_pkg_files[${fname}]
 		elif [[ "${sum}" == L* ]]; then
 			sum="${sum#L}"
 			if [[ -L "${fname}" && "${sum}" == "$(builtin stat +link "${fname}")" ]]; then
 				builtin rm -f "${fname}"
-				unset lp_pkg_files[${fname}]
 			else
 				(( leftovers++ ))
 			fi
@@ -203,12 +193,11 @@ lp_uninstaller() {
 	done
 
 	if [[ "${#real_files}" -gt 0 ]]; then
-		command -p openssl dgst -r "-${lp_pkg[hash]}" "${real_files[@]}" | while read -r sum fname; do
+		command -p openssl dgst -r "-${lp_pkg[hash]}" "${(@)real_files}" | while read -r sum fname; do
 			fname="${fname##\*}"
 
 			if [[ "${sum}" == "${lp_pkg_files[${fname}]}" ]]; then
 				builtin rm -f "${fname}"
-				unset lp_pkg_files[${fname}]
 			else
 				lp_log "File ${fname} has been modified, not removing"
 				(( leftovers++ ))

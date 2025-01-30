@@ -130,27 +130,46 @@ lp_installer() {
 		if [[ -n "${1}" ]]; then
 			# query the old manager script for the package files and remove files that are no longer needed
 			private -A old_files=()
+			private -A new_files=()
+			private value key hash fname
+
+			for fname in "${(@)lp_installed_files}"; do
+				new_files[${fname}]=1
+			done
+
 			command "${1}" list -r | while read -r value key; do
-				if [[ ! -v lp_installed_files[${key}] && -f "${LOCALPKG_PREFIX}/${key}" ]]; then
-					old_files[${key}]="${value}"
+				if [[ ! -v new_files[${key}] ]]; then
+					if [[ "${value}" == "L"* ]]; then
+						if [[ -L "${LOCALPKG_PREFIX}/${key}" ]]; then
+							hash="$(builtin stat +link "${LOCALPKG_PREFIX}/${key}")"
+							if [[ "${value}" == "L${hash}" ]]; then
+								lp_log "Removing outdated file ${key}"
+								builtin rm -f "${LOCALPKG_PREFIX}/${key}"
+							fi
+						fi
+					elif [[ -f "${LOCALPKG_PREFIX}/${key}" ]]; then
+						old_files[${key}]="${value}"
+					fi
 				fi
 			done
 
-			command -p openssl dgst -r "-${lp_old_pkg[hashalg]}" "${(k)old_files}" | while read -r hash fname; do
-				fname="${fname##\*}"
-				if [[ "${old_files[${fname}]}" == "${hash}" ]]; then
-					lp_log "Removing outdated file ${fname}"
-					builtin rm -f "${LOCALPKG_PREFIX}/${fname}"
-				else
-					lp_log "Outdated file ${fname} has changed, not removing"
-				fi
-			done
+			if [[ ${#old_files} -gt 0 ]]; then
+				command -p openssl dgst -r "-${lp_old_pkg[hashalg]}" "${(k)old_files}" | while read -r hash fname; do
+					fname="${fname##\*}"
+					if [[ "${old_files[${fname}]}" == "${hash}" ]]; then
+						lp_log "Removing outdated file ${fname}"
+						builtin rm -f "${LOCALPKG_PREFIX}/${fname}"
+					else
+						lp_log "Outdated file ${fname} has changed, not removing"
+					fi
+				done
+			fi
 		fi
 
 		private mgr="$(lp_mgr_create)" || return 1
 		command "${mgr}"
 	} always {
-		builtin rm -rf "${tmpdir}"
+		builtin rm -rf "${tmpdir}" 2>/dev/null || true
 	}
 }
 
