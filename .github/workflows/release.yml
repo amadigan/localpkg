@@ -26,7 +26,7 @@ jobs:
         mkdir -p cache
         export DOCKER_CACHE="$(pwd)/cache"
         export RELEASE_TAG="$(git describe --tags --always)"
-        ./build-docker-release.sh --push "ghcr.io/${GITHUB_REPSITORY}/localpkg:${RELEASE_TAG}" release
+        ./build-docker-release.sh --push "ghcr.io/${GITHUB_REPOSITORY}/localpkg:${RELEASE_TAG}" release
         gh release upload --clobber "${RELEASE_TAG}" release/*
     - name: Push Cache
       uses: actions/cache@v4
