@@ -16,7 +16,7 @@ lp_compressed_init() {
 lp_compress_script() {
 	private name="${1}"
 	private srcfile="${2:a}"
-	#private init="$(functions lp_compressed_init)"
+	private init="$(functions lp_compressed_init)"
 
 	# this ends up creating an xzipped tar archive with a single member named '_'
 	private -a tar_args=(

@@ -36,7 +36,7 @@ lp_mgr_build() {
 	for fname in "${(@)lp_installed_files}"; do
 		# if it's a symlink, the "hash" is the canonical path of the target
 		if [[ -L "${fname}" ]]; then
-			linktarget="$(zstat +link "${fname}")"
+			linktarget="$(builtin stat +link "${fname}")"
 			lp_pkg_files[${fname}]="L${linktarget}"
 		elif [[ -f "${fname}" ]]; then
 			real_files+=("${fname}")
@@ -52,15 +52,7 @@ lp_mgr_build() {
 
 	typeset -p lp_pkg_files
 	unset lp_pkg_files
-
-	if [[ -n "${lp_pkg[repo]}" && -z "${lp_pkg[installer]}" && -z "${lp_pkg[installer_url]}"  ]]; then
-		# full manager script
-		xlp_transclude
-	else
-		# mini-manager script
-		typeset -f "${lp_core_funcs[@]}"
-		typeset -f -m 'lp_mgr_*' lp_cmd 'lp_cmd_*' lp_manager_init
-	fi
+	xlp_transclude
 
 	echo "lp_mgr_main \"\${@}\"\nexit\n"
 }
