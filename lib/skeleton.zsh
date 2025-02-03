@@ -11,14 +11,6 @@ lp_skeleton() {
 		} > "${LOCALPKG_PREFIX}/etc/bashrc"
 	fi
 
-	if [[ ! -f "${LOCALPKG_PREFIX}/etc/zshenv" ]]; then
-		{
-			echo "#!/bin/zsh"
-			echo "# localpkg DO NOT EDIT"
-			lp_write_anon_func lp_skeleton_zshenv "\"${prefix}\""
-		} > "${LOCALPKG_PREFIX}/etc/zshenv"
-	fi
-
 	if [[ ! -f "${LOCALPKG_PREFIX}/etc/zshrc" ]]; then
 		{
 			echo "#!/bin/zsh"
@@ -39,7 +31,6 @@ lp_skeleton() {
 
 lp_skeleton_mklines() {
 	private prefix="${LOCALPKG_PREFIX/#$HOME/\${HOME\}}"
-	lp_skeleton_lines[${HOME}/.zshenv]="[[ -r \"${prefix}/etc/zshenv\" ]] && source \"${prefix}/etc/zshenv\" # localpkg DO NOT EDIT"
 	lp_skeleton_lines[${HOME}/.zshrc]="[[ -r \"${prefix}/etc/zshrc\" ]] && source \"${prefix}/etc/zshrc\" # localpkg DO NOT EDIT"
 	lp_skeleton_lines[${HOME}/.bash_profile]="[[ -r \"${prefix}/etc/bashrc\" ]] && source \"${prefix}/etc/bashrc\" # localpkg DO NOT EDIT"
 	lp_skeleton_lines[${HOME}/.bashrc]="[[ -r \"${prefix}/etc/bashrc\" ]] && source \"${prefix}/etc/bashrc\" # localpkg DO NOT EDIT"
@@ -75,24 +66,9 @@ lp_skeleton_bashrc() {
 	fi
 }
 
-lp_skeleton_zshenv() {
-	# this is written as an anonymous function to ~/.local/etc/zshenv, with LOCALPKG_PREFIX as a parameter
-	export LOCALPKG_PREFIX="${1}" 
-	[[ ":${PATH}:" != *":${1}/bin:"* ]] && path=("${1}/bin" "${(@)path}") 
-	local -a __localpkg_zshenv_files
-	{
-		setopt localoptions null_glob
-		__localpkg_zshenv_files=("${1}/etc/zshenv.d/*.zsh"(N))
-	}
-	local __localpkg_zshenv
-	for __localpkg_zshenv in "${(@)__localpkg_zshenv_files}"
-	do
-		[[ -r "${__localpkg_zshenv}" ]] && source "${__localpkg_zshenv}"
-	done
-}
-
 lp_skeleton_zshrc() {
 	# this is written as an anonymous function to ~/.local/etc/zshrc, with LOCALPKG_PREFIX as a parameter
+	[[ ":${PATH}:" != *":${1}/bin:"* ]] && path=("${1}/bin" "${(@)path}") 
 	[[ ":${MANPATH}:" != *":${1}/share/man:"* ]] && manpath=("${1}/share/man" "${(@)manpath}")
 	local -a __localpkg_zshrc_files
 	{
