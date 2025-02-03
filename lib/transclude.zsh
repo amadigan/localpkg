@@ -18,6 +18,9 @@ lp_compress_script() {
 	private srcfile="${2:a}"
 	private init="$(functions lp_compressed_init)"
 
+	# if name starts with r, prefix it to avoid restricted shell issues
+	[[ "${name}" == r* ]] && name="_${name}"
+
 	# this ends up creating an xzipped tar archive with a single member named '_'
 	private -a tar_args=(
 		--create --no-xattrs --block-size 1 --options xz:compression-level=9 --xz -s '/.*/_/' --numeric-owner --uid 0 
