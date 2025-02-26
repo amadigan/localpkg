@@ -22,14 +22,6 @@ typeset -tAg lp_pkg=(
 	[download_hash]="" # hash of the downloaded file
 )
 
-typeset -tag lp_core_funcs=(
-	"lp_debug"
-	"lp_log"
-	"lp_error"
-	"lp_boot"
-	"lp_hash_file"
-)
-
 typeset -tg lp_debug_current_cmd=""
 typeset -tg lp_log_timestamp='%D{%Y-%m-%dT%H:%M:%SZ}'
 
@@ -45,7 +37,6 @@ lp_log() {
 
 lp_error() {
 	printf '%s ERROR %s\n' "${(%)lp_log_timestamp}" "${*}" >&2
-	set -x
 	return 1
 }
 
@@ -143,6 +134,13 @@ lp_hash_file() {
 	private hash="$(command -p openssl dgst -r "-${hashalg}" "${file}")"
 	hash="${hash%% *}"
 	printf "%s" "${hash}"
+}
+
+lp_unset() {
+	local var
+	for var in "${@}"; do
+		[[ -v "${var}" ]] && unset "${var}"
+	done
 }
 
 lp_cmd() {

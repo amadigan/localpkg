@@ -36,7 +36,8 @@ lp_mgr_build() {
 	done
 
 	if [[ "${#real_files}" -gt 0 ]]; then
-		command -p openssl dgst -r "-${lp_pkg[hash]}" "${real_files[@]}" | while read -r hash fname; do
+		lp_log "Calculating hashes for ${#real_files} files"
+		command -p openssl dgst -r "-${lp_pkg[hash]}" "${(@)real_files}" | while read -r hash fname; do
 			fname="${fname##\*}"
 			lp_pkg_files[${fname}]="${hash}"
 		done
@@ -69,6 +70,9 @@ lp_mgr_main()	{
 
 		echo "To remove:"
 		echo "\t${arg0} remove"
+		echo ""
+		echo "To update:"
+		echo "\t${arg0} update"
 
 		return 0
 	fi
@@ -268,8 +272,9 @@ lp_mgr_cmd_update() {
 	local -A lp_old_pkg=(${(kv)lp_pkg})
 	local -A lp_pkg=(${(kv)lp_old_pkg})
 
-	unset lp_pkg[package_url] lp_pkg[package] lp_pkg[pacakge_hash] 
-	unset lp_pkg[content_type] lp_pkg[effective_url] lp_pkg[etag] lp_pkg[last_modified] lp_pkg[filename] lp_pkg[download_hash]
+	lp_unset "lp_pkg[package_url]" "lp_pkg[package]" "lp_pkg[pacakge_hash]" "lp_pkg[content_type]" "lp_pkg[effective_url]" \
+		"lp_pkg[etag]" "lp_pkg[last_modified]" "lp_pkg[filename]" "lp_pkg[download_hash]"
+		
 	lp_pkg[release]="${1}"
 
 	lp_launch_installer -u "${ZSH_SCRIPT:A}" # this won't return if there's an installer

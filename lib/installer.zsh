@@ -154,7 +154,7 @@ lp_installer() {
 			done
 
 			if [[ ${#old_files} -gt 0 ]]; then
-				command -p openssl dgst -r "-${lp_old_pkg[hashalg]}" "${(k)old_files}" | while read -r hash fname; do
+				command -p openssl dgst -r "-${lp_old_pkg[hashalg]}" "${(@k)old_files}" | while read -r hash fname; do
 					fname="${fname##\*}"
 					if [[ "${old_files[${fname}]}" == "${hash}" ]]; then
 						lp_log "Removing outdated file ${fname}"
