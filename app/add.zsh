@@ -181,9 +181,12 @@ lpcli_add_pkg() {
     return 0
   fi
 
-	lp_pkg[download_hash]=$(lp_hash_file "${lp_pkg[hashalg]}" "${outfile}")
+	if ! lp_pkg[download_hash]=$(lp_hash_file "${lp_pkg[hashalg]}" "${outfile}"); then
+		lp_error "Failed to calculate hash for ${outfile}"
+		return 1
+	fi
 
-  if [[ -v lp_old_pkg && -n "${lp_old_pkg[download_hash]}" == "${lp_pkg[download_hash]}" ]]; then
+  if [[ -v lp_old_pkg && "${lp_old_pkg[download_hash]}" == "${lp_pkg[download_hash]}" ]]; then
 		lp_log "Package ${lp_pkg[name]} ${lp_pkg[release]} is already installed"
 
 		return 0
@@ -191,7 +194,7 @@ lpcli_add_pkg() {
 
 	lp_install_download "${outfile}" || return 1 # adds files to lp_installed_files
   lp_log "Installed ${lp_pkg[name]} ${lp_pkg[release]}"
-	[[ -n "${tmpdir}" ]] && builtin rm -f "${tmpdir}"
+	[[ -n "${tmpdir}" ]] && builtin rm -rf "${tmpdir}"
 	unset tmpdir outfile
 	lp_skeleton
 	private mgr="$(lp_mgr_create)" || return 1

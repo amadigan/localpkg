@@ -37,7 +37,7 @@ lp_mgr_build() {
 
 	if [[ "${#real_files}" -gt 0 ]]; then
 		lp_log "Calculating hashes for ${#real_files} files"
-		command -p openssl dgst -r "-${lp_pkg[hash]}" "${(@)real_files}" | while read -r hash fname; do
+		command -p openssl dgst -r "-${lp_pkg[hashalg]}" "${(@)real_files}" | while read -r hash fname; do
 			fname="${fname##\*}"
 			lp_pkg_files[${fname}]="${hash}"
 		done
@@ -169,7 +169,7 @@ lp_uninstaller() {
 	private leftovers=0
 	private fname sum
 	private prune="${1:-1}"
-	private force="${1:-0}"
+	private force="${2:-0}"
 	private -aU dirs
 	private -a real_files=()
 
@@ -197,7 +197,7 @@ lp_uninstaller() {
 	done
 
 	if [[ "${#real_files}" -gt 0 ]]; then
-		command -p openssl dgst -r "-${lp_pkg[hash]}" "${(@)real_files}" | while read -r sum fname; do
+		command -p openssl dgst -r "-${lp_pkg[hashalg]}" "${(@)real_files}" | while read -r sum fname; do
 			fname="${fname##\*}"
 
 			if [[ "${sum}" == "${lp_pkg_files[${fname}]}" ]]; then
@@ -272,7 +272,7 @@ lp_mgr_cmd_update() {
 	local -A lp_old_pkg=(${(kv)lp_pkg})
 	local -A lp_pkg=(${(kv)lp_old_pkg})
 
-	lp_unset "lp_pkg[package_url]" "lp_pkg[package]" "lp_pkg[pacakge_hash]" "lp_pkg[content_type]" "lp_pkg[effective_url]" \
+	lp_unset "lp_pkg[package_url]" "lp_pkg[package]" "lp_pkg[package_hash]" "lp_pkg[content_type]" "lp_pkg[effective_url]" \
 		"lp_pkg[etag]" "lp_pkg[last_modified]" "lp_pkg[filename]" "lp_pkg[download_hash]"
 		
 	lp_pkg[release]="${1}"

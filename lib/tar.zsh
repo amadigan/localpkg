@@ -160,7 +160,10 @@ lp_is_exec() {
 	private fd fmagic
 
 	sysopen -r -u fd "${fname}" || return 1
-	sysread -i "${fd}" -s 4 fmagic
+	if ! sysread -i "${fd}" -s 4 fmagic; then
+		exec {fd}<&-
+		return 1
+	fi
 	exec {fd}<&-
 
 	# check for short shebang

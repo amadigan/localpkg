@@ -122,7 +122,7 @@ lp_mktempfile() {
 
 lp_cleanup() {
 	[[ ! -v lp_tmp_dirs ]] && return 0
-	for dir in "${lpr_tmp_dirs[@]}"; do
+	for dir in "${lp_tmp_dirs[@]}"; do
 		builtin rm -rf "${dir}"
 	done
 }

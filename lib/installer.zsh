@@ -205,7 +205,6 @@ lp_fetch_pkg_curl() {
 	if [[ -n "${fetch_info[errormsg]}" ]]; then
 		lp_error "Failed to download ${lp_pkg[package_url]}: ${fetch_info[errormsg]}"
 		return 1
-		return 1
 	elif [[ "${fetch_info[http_code]}" == "304" ]]; then
 		lp_log "Package ${lp_pkg[name]} ${lp_pkg[release]} is already installed"
 		return 0
